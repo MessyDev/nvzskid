@@ -473,19 +473,11 @@ local CoreFunctions = {
 
         GetColor = function(Player, DefaultColor)
                 local Settings = Environment.Settings
-                local GetTeamString = CoreFunctions and CoreFunctions.GetTeamString
+                local GetTeamString = CoreFunctions.GetTeamString
 
                 local Character = IsA(Player, "Player") and __index(Player, "Character") or Player
 
-                if not (Settings.EnableTeamColors and GetTeamString) then
-                        return DefaultColor
-                end
-
-                local CharacterTeam = GetTeamString(Character)
-                local LocalCharacter = __index(LocalPlayer, "Character")
-                local LocalTeam = LocalCharacter and GetTeamString(LocalCharacter)
-
-                return CharacterTeam and LocalTeam and LocalTeam == CharacterTeam and Settings.TeamColor or DefaultColor
+                return Settings.EnableTeamColors and GetTeamString(Character) and GetTeamString(__index(LocalPlayer, "Character")) == GetTeamString(Character) and Settings.TeamColor or DefaultColor
         end,
 
 	Calculate3DQuad = function(_CFrame, SizeVector, YVector)
@@ -1438,16 +1430,11 @@ local UtilityFunctions = {
                                 Checks.Team = true
 
                                 if Settings.TeamCheck then
-                                        local GetTeamString = CoreFunctions and CoreFunctions.GetTeamString
+                                        local GetTeamString = CoreFunctions.GetTeamString
+                                        local TargetTeam = GetTeamString(CharacterModel)
+                                        local LocalTeam = GetTeamString(LocalCharacter)
 
-                                        if GetTeamString then
-                                                local TargetTeam = GetTeamString(CharacterModel)
-                                                local LocalTeam = GetTeamString(LocalCharacter)
-
-                                                Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
-                                        else
-                                                Checks.Team = true
-                                        end
+                                        Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
                                 end
 
                                 Checks.Ready = Checks.Ready and Checks.Alive and Checks.Team and IsInDistance and Environment.Settings.EntityESP
@@ -1466,6 +1453,10 @@ local UtilityFunctions = {
                                         Checks.Ready = false; return
                                 end
 
+                                local GetTeamString = CoreFunctions.GetTeamString
+                                local TargetTeam = GetTeamString(Character)
+                                local LocalTeam = GetTeamString(LocalCharacter)
+
                                 Checks.Alive = true
                                 Checks.Team = true
 
@@ -1474,14 +1465,7 @@ local UtilityFunctions = {
                                 end
 
                                 if Settings.TeamCheck then
-                                        local GetTeamString = CoreFunctions and CoreFunctions.GetTeamString
-
-                                        if GetTeamString then
-                                                local TargetTeam = GetTeamString(Character)
-                                                local LocalTeam = GetTeamString(LocalCharacter)
-
-                                                Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
-                                        end
+                                        Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
                                 end
 
 				IsInDistance = (__index(Head, "Position") - LocalCharacterPosition).Magnitude <= RenderDistance
