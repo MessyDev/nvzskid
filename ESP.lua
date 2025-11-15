@@ -397,6 +397,19 @@ local function Recursive(Table, Callback)
 	end
 end
 
+local function SafeGetTeamString(Character)
+        local Functions = CoreFunctions or (getgenv().ExunysDeveloperESP and getgenv().ExunysDeveloperESP.CoreFunctions)
+        local GetTeamString = Functions and Functions.GetTeamString
+
+        if not GetTeamString then
+                return nil
+        end
+
+        local Success, Result = pcall(GetTeamString, Character)
+
+        return Success and Result or nil
+end
+
 local CoreFunctions = {
 	ConvertVector = function(Vector)
 		return Vector2new(Vector.X, Vector.Y)
