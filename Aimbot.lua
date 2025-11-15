@@ -49,8 +49,6 @@ local WorldToViewportPoint = __index(Camera, "WorldToViewportPoint")
 local GetPartsObscuringTarget = __index(Camera, "GetPartsObscuringTarget")
 local GetMouseLocation = __index(UserInputService, "GetMouseLocation")
 local GetPlayers = __index(Players, "GetPlayers")
-local GetPlayerFromCharacter = __index(Players, "GetPlayerFromCharacter")
-local GetChildren = __index(workspace, "GetChildren")
 
 --// Variables
 
@@ -95,13 +93,12 @@ getgenv().ExunysDeveloperAimbot = {
 		RainbowSpeed = 1 -- Bigger = Slower
 	},
 
-        Settings = {
-                Enabled = true,
+	Settings = {
+		Enabled = true,
 
-                DetectionMode = "Both", -- "Players", "NPCs" or "Both"
-                TeamCheck = false,
-                AliveCheck = true,
-                WallCheck = false,
+		TeamCheck = false,
+		AliveCheck = true,
+		WallCheck = false,
 
 		OffsetToMoveDirection = false,
 		OffsetIncrement = 15,
@@ -184,67 +181,51 @@ local CancelLock = function()
 end
 
 local GetClosestPlayer = function()
-        local Settings = Environment.Settings
-        local LockPart = Settings.LockPart
+	local Settings = Environment.Settings
+	local LockPart = Settings.LockPart
 
-        local Units = FindFirstChild(workspace, "Units")
+	if not Environment.Locked then
+		RequiredDistance = Environment.FOVSettings.Enabled and Environment.FOVSettings.Radius or 2000
 
-        if not Environment.Locked then
-                RequiredDistance = Environment.FOVSettings.Enabled and Environment.FOVSettings.Radius or 2000
+		for _, Value in next, GetPlayers(Players) do
+			local Character = __index(Value, "Character")
+			local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
 
-                local LocalTeam = (FindFirstChild(__index(LocalPlayer, "Character"), "TEAM"))
-                LocalTeam = LocalTeam and __index(LocalTeam, "Value")
+			if Value ~= LocalPlayer and not tablefind(Environment.Blacklisted, __index(Value, "Name")) and Character and FindFirstChild(Character, LockPart) and Humanoid then
+				local PartPosition, TeamCheckOption = __index(Character[LockPart], "Position"), Environment.DeveloperSettings.TeamCheckOption
 
-                for _, Character in next, Units and GetChildren(Units) or {} do
-                        local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
-                        local LockPartInstance = Character and FindFirstChild(Character, LockPart)
-                        local Player = Character and GetPlayerFromCharacter(Players, Character)
-                        local IsPlayer = Player ~= nil
+				if Settings.TeamCheck and __index(Value, TeamCheckOption) == __index(LocalPlayer, TeamCheckOption) then
+					continue
+				end
 
-                        if Settings.DetectionMode == "Players" and not IsPlayer or Settings.DetectionMode == "NPCs" and IsPlayer then
-                                continue
-                        end
+				if Settings.AliveCheck and __index(Humanoid, "Health") <= 0 then
+					continue
+				end
 
-                        local Identifier = (IsPlayer and __index(Player, "Name")) or __index(Character, "Name")
+				if Settings.WallCheck then
+					local BlacklistTable = GetDescendants(__index(LocalPlayer, "Character"))
 
-                        if IsPlayer and Player == LocalPlayer or tablefind(Environment.Blacklisted, Identifier) or not LockPartInstance or not Humanoid then
-                                continue
-                        end
+					for _, Value in next, GetDescendants(Character) do
+						BlacklistTable[#BlacklistTable + 1] = Value
+					end
 
-                        local TeamValue = FindFirstChild(Character, "TEAM")
-                        TeamValue = TeamValue and __index(TeamValue, "Value")
+					if #GetPartsObscuringTarget(Camera, {PartPosition}, BlacklistTable) > 0 then
+						continue
+					end
+				end
 
-                        if Settings.TeamCheck and TeamValue and LocalTeam and TeamValue == LocalTeam then
-                                continue
-                        end
+				local Vector, OnScreen, Distance = WorldToViewportPoint(Camera, PartPosition)
+				Vector = ConvertVector(Vector)
+				Distance = (GetMouseLocation(UserInputService) - Vector).Magnitude
 
-                        if Settings.AliveCheck and __index(Humanoid, "Health") <= 0 then
-                                continue
-                        end
-
-                        if Settings.WallCheck then
-                                local BlacklistTable = GetDescendants(__index(LocalPlayer, "Character"))
-
-                                for _, Value in next, GetDescendants(Character) do
-                                        BlacklistTable[#BlacklistTable + 1] = Value
-                                end
-
-                                if #GetPartsObscuringTarget(Camera, {__index(LockPartInstance, "Position")}, BlacklistTable) > 0 then
-                                        continue
-                                end
-                        end
-
-                        local Vector, OnScreen, Distance = WorldToViewportPoint(Camera, __index(LockPartInstance, "Position"))
-                        Vector = ConvertVector(Vector)
-                        Distance = (GetMouseLocation(UserInputService) - Vector).Magnitude
-
-                        if Distance < RequiredDistance and OnScreen then
-                                RequiredDistance, Environment.Locked = Distance, {Character = Character, Player = Player}
-                        end
-                end
-        elseif (GetMouseLocation(UserInputService) - ConvertVector(WorldToViewportPoint(Camera, __index(__index(__index(Environment.Locked, "Character"), LockPart), "Position")))).Magnitude > RequiredDistance then
-                CancelLock()
-        end
+				if Distance < RequiredDistance and OnScreen then
+					RequiredDistance, Environment.Locked = Distance, Value
+				end
+			end
+		end
+	elseif (GetMouseLocation(UserInputService) - ConvertVector(WorldToViewportPoint(Camera, __index(__index(__index(Environment.Locked, "Character"), LockPart), "Position")))).Magnitude > RequiredDistance then
+		CancelLock()
+	end
 end
 
 local Load = function()
