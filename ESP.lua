@@ -1457,12 +1457,12 @@ local UtilityFunctions = {
                                 local TargetTeam = GetTeamString(Character)
                                 local LocalTeam = GetTeamString(LocalCharacter)
 
-				Checks.Alive = true
-				Checks.Team = true
+                                Checks.Alive = true
+                                Checks.Team = true
 
-				if Settings.AliveCheck then
-					Checks.Alive = __index(Humanoid, "Health") > 0
-				end
+                                if Settings.AliveCheck then
+                                        Checks.Alive = __index(Humanoid, "Health") > 0
+                                end
 
                                 if Settings.TeamCheck then
                                         Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
