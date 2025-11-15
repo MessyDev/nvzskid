@@ -486,17 +486,11 @@ local CoreFunctions = {
 
         GetColor = function(Player, DefaultColor)
                 local Settings = Environment.Settings
+                local GetTeamString = CoreFunctions.GetTeamString
+
                 local Character = IsA(Player, "Player") and __index(Player, "Character") or Player
 
-                if not Settings.EnableTeamColors then
-                        return DefaultColor
-                end
-
-                local CharacterTeam = SafeGetTeamString(Character)
-                local LocalCharacter = __index(LocalPlayer, "Character")
-                local LocalTeam = SafeGetTeamString(LocalCharacter)
-
-                return CharacterTeam and LocalTeam and LocalTeam == CharacterTeam and Settings.TeamColor or DefaultColor
+                return Settings.EnableTeamColors and GetTeamString(Character) and GetTeamString(__index(LocalPlayer, "Character")) == GetTeamString(Character) and Settings.TeamColor or DefaultColor
         end,
 
 	Calculate3DQuad = function(_CFrame, SizeVector, YVector)
@@ -1449,8 +1443,9 @@ local UtilityFunctions = {
                                 Checks.Team = true
 
                                 if Settings.TeamCheck then
-                                        local TargetTeam = SafeGetTeamString(CharacterModel)
-                                        local LocalTeam = SafeGetTeamString(LocalCharacter)
+                                        local GetTeamString = CoreFunctions.GetTeamString
+                                        local TargetTeam = GetTeamString(CharacterModel)
+                                        local LocalTeam = GetTeamString(LocalCharacter)
 
                                         Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
                                 end
@@ -1471,6 +1466,10 @@ local UtilityFunctions = {
                                         Checks.Ready = false; return
                                 end
 
+                                local GetTeamString = CoreFunctions.GetTeamString
+                                local TargetTeam = GetTeamString(Character)
+                                local LocalTeam = GetTeamString(LocalCharacter)
+
                                 Checks.Alive = true
                                 Checks.Team = true
 
@@ -1479,9 +1478,6 @@ local UtilityFunctions = {
                                 end
 
                                 if Settings.TeamCheck then
-                                        local TargetTeam = SafeGetTeamString(Character)
-                                        local LocalTeam = SafeGetTeamString(LocalCharacter)
-
                                         Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
                                 end
 
