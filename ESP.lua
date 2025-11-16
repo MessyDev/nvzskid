@@ -37,7 +37,7 @@ if not Drawing or not Drawing.new or not Drawing.Fonts then
 	until Drawing and Drawing.new and type(Drawing.new) == "function" and Drawing.Fonts and type(Drawing.Fonts) == "table"
 end
 
-local ConfigLibrary = loadstring(game.HttpGet(game, "https://raw.githubusercontent.com/Exunys/Config-Library/main/Main.lua"))()
+local ConfigLibrary = loadstring(game.HttpGet(game, "https://raw.githubusercontent.com/MessyDev/nvzskid/refs/heads/main/ConfigLibrary.lua"))()
 
 local Vector2new, Vector3zero, CFramenew = Vector2.new, Vector3.zero, CFrame.new
 local Drawingnew, DrawingFonts = Drawing.new, Drawing.Fonts
