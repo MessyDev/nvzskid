@@ -1625,9 +1625,11 @@ Entry.RigType = Humanoid and SafeFindFirstChild(__index(Part, "Parent"), "Torso"
 	WrapObject = function(self, Object, PseudoName, Allowed, RenderDistance)
 		assert(self, "EXUNYS_ESP > UtilityFunctions.WrapObject - Internal error, unassigned parameter \"self\".")
 
-		if pcall(gethiddenproperty, Object, "PrimaryPart") then
-			Object = __index(Object, "PrimaryPart")
-		end
+                if SafeIsA(Object, "Model") and pcall(gethiddenproperty, Object, "PrimaryPart") then
+                        local Success, PrimaryPart = pcall(__index, Object, "PrimaryPart")
+
+                        Object = Success and PrimaryPart or Object
+                end
 
 		if not Object then
 			return
