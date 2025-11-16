@@ -79,6 +79,22 @@ local _GetService = __index(game, "GetService")
 local FindFirstChild, WaitForChild = __index(game, "FindFirstChild"), __index(game, "WaitForChild")
 local IsA = __index(game, "IsA")
 
+local function SafeFindFirstChild(Object, ...)
+return typeof(Object) == "Instance" and FindFirstChild(Object, ...)
+end
+
+local function SafeFindFirstChildOfClass(Object, ...)
+return typeof(Object) == "Instance" and Object.FindFirstChildOfClass(Object, ...)
+end
+
+local function SafeWaitForChild(Object, ...)
+return typeof(Object) == "Instance" and WaitForChild(Object, ...)
+end
+
+local function SafeIsA(Object, ...)
+return typeof(Object) == "Instance" and IsA(Object, ...)
+end
+
 local GetService = function(Service)
 	return cloneref(_GetService(game, Service))
 end
@@ -92,7 +108,7 @@ local CurrentCamera = __index(Workspace, "CurrentCamera")
 local LocalPlayer = __index(Players, "LocalPlayer")
 
 local FindFirstChildOfClass = function(self, ...)
-	return typeof(self) == "Instance" and self.FindFirstChildOfClass(self, ...)
+return SafeFindFirstChildOfClass(self, ...)
 end
 
 local Cache = {
@@ -230,14 +246,16 @@ getgenv().ExunysDeveloperESP = {
 		WidthBoundary = 1.5 -- Divisor - Smaller Value = Bigger Width
 	},
 
-	Settings = {
-		Enabled = true,
-		PartsOnly = false,
-		TeamCheck = false,
-		AliveCheck = true,
-		LoadConfigOnLaunch = true,
-		EnableTeamColors = false,
-		TeamColor = Color3fromRGB(170, 170, 255)
+        Settings = {
+                Enabled = true,
+                PartsOnly = false,
+                DetectionMode = "Both", -- "Players", "NPCs" or "Both"
+                TeamCheck = false,
+                AliveCheck = true,
+                EntityESP = true,
+                LoadConfigOnLaunch = true,
+                EnableTeamColors = false,
+                TeamColor = Color3fromRGB(170, 170, 255)
 	},
 
 	Properties = {
@@ -395,6 +413,19 @@ local function Recursive(Table, Callback)
 	end
 end
 
+local function SafeGetTeamString(Character)
+        local Functions = CoreFunctions or (getgenv().ExunysDeveloperESP and getgenv().ExunysDeveloperESP.CoreFunctions)
+        local GetTeamString = Functions and Functions.GetTeamString
+
+        if not GetTeamString then
+                return nil
+        end
+
+        local Success, Result = pcall(GetTeamString, Character)
+
+return Success and Result or nil
+end
+
 local CoreFunctions = {
 	ConvertVector = function(Vector)
 		return Vector2new(Vector.X, Vector.Y)
@@ -410,12 +441,18 @@ local CoreFunctions = {
 		return Color3fromHSV(tick() % RainbowSpeed / RainbowSpeed, 1, 1)
 	end,
 
-	GetLocalCharacterPosition = function()
-		local LocalCharacter = __index(LocalPlayer, "Character")
-		local LocalPlayerCheckPart = LocalCharacter and (__index(LocalCharacter, "PrimaryPart") or FindFirstChild(LocalCharacter, "Head"))
+        GetLocalCharacterPosition = function()
+                local LocalCharacter = __index(LocalPlayer, "Character")
+local LocalPlayerCheckPart = LocalCharacter and (__index(LocalCharacter, "PrimaryPart") or SafeFindFirstChild(LocalCharacter, "Head"))
 
-		return LocalPlayerCheckPart and __index(LocalPlayerCheckPart, "Position") or __index(CurrentCamera, "CFrame").Position
-	end,
+                return LocalPlayerCheckPart and __index(LocalPlayerCheckPart, "Position") or __index(CurrentCamera, "CFrame").Position
+        end,
+
+        GetTeamString = function(Character)
+local TeamValue = Character and SafeFindFirstChild(Character, "TEAM")
+
+                return TeamValue and __index(TeamValue, "Value") or nil
+        end,
 
 	GenerateHash = function(Bits)
 		local Result = ""
@@ -433,10 +470,10 @@ local CoreFunctions = {
 		local DeveloperSettings = Environment.DeveloperSettings
 		local WidthBoundary = DeveloperSettings.WidthBoundary
 
-		local IsAPlayer = IsA(Object, "Player")
+local IsAPlayer = SafeIsA(Object, "Player")
 
-		local Part = IsAPlayer and (FindFirstChild(Players, __index(Object, "Name")) and __index(Object, "Character"))
-		Part = IsAPlayer and Part and (__index(Part, "PrimaryPart") or FindFirstChild(Part, "HumanoidRootPart")) or Object
+local Part = IsAPlayer and (SafeFindFirstChild(Players, __index(Object, "Name")) and __index(Object, "Character"))
+Part = IsAPlayer and Part and (__index(Part, "PrimaryPart") or SafeFindFirstChild(Part, "HumanoidRootPart")) or Object
 
 		if not Part or IsA(Part, "Player") then
 			return nil, nil, false
@@ -445,7 +482,7 @@ local CoreFunctions = {
 		local PartCFrame, PartPosition, PartUpVector = __index(Part, "CFrame"), __index(Part, "Position")
 		PartUpVector = PartCFrame.UpVector
 
-		local RigType = FindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
+local RigType = SafeFindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
 
 		local CameraUpVector = __index(CurrentCamera, "CFrame").UpVector
 
@@ -463,10 +500,39 @@ local CoreFunctions = {
 		return BoxPosition, BoxSize, (TopOnScreen and BottomOnScreen)
 	end,
 
+	
 	GetColor = function(Player, DefaultColor)
-		local Settings, TeamCheckOption = Environment.Settings, Environment.DeveloperSettings.TeamCheckOption
+		local Settings = Environment.Settings
+		local Character = IsA(Player, "Player") and __index(Player, "Character") or Player
+		local CharacterTeam = SafeGetTeamString(Character)
+		local LocalCharacter = __index(LocalPlayer, "Character")
+		local LocalTeam = SafeGetTeamString(LocalCharacter)
 
-		return Settings.EnableTeamColors and __index(Player, TeamCheckOption) == __index(LocalPlayer, TeamCheckOption) and Settings.TeamColor or DefaultColor
+		local function GetTeamColorFromString(Team)
+			if not Team then
+				return Color3fromRGB(128, 128, 128)
+			end
+
+			local LowerTeam = stringlower(Team)
+
+			if LowerTeam == "noobs" or LowerTeam == "noob" then
+				return Color3fromRGB(255, 255, 0)
+			elseif LowerTeam == "zombie" or LowerTeam == "zombies" then
+				return Color3fromRGB(0, 255, 0)
+			elseif LowerTeam == "human" or LowerTeam == "humans" then
+				return Color3fromRGB(0, 0, 255)
+			end
+
+			return Color3fromRGB(128, 128, 128)
+		end
+
+		local TeamColor = GetTeamColorFromString(CharacterTeam)
+
+		if Settings.EnableTeamColors and CharacterTeam and LocalTeam and LocalTeam == CharacterTeam then
+			return Settings.TeamColor
+		end
+
+		return TeamColor or DefaultColor
 	end,
 
 	Calculate3DQuad = function(_CFrame, SizeVector, YVector)
@@ -574,10 +640,10 @@ local UpdatingFunctions = {
 			local Name, DisplayName = Entry.Name, Entry.DisplayName
 
 			local Character = IsAPlayer and __index(Player, "Character") or Player
-			local Humanoid = FindFirstChildOfClass(Character, "Humanoid")
+local Humanoid = FindFirstChildOfClass(Character, "Humanoid")
 			local Health, MaxHealth = Humanoid and __index(Humanoid, "Health") or Nan, Humanoid and __index(Humanoid, "MaxHealth") or Nan
 
-			local Tool = Settings.DisplayTool and FindFirstChildOfClass(Character, "Tool")
+local Tool = Settings.DisplayTool and FindFirstChildOfClass(Character, "Tool")
 
 			Content = ((Settings.DisplayDisplayName and Settings.DisplayName and DisplayName ~= Name) and stringformat("%s (%s)", DisplayName, Name) or (Settings.DisplayDisplayName and not Settings.DisplayName) and DisplayName or (not Settings.DisplayDisplayName and Settings.DisplayName) and Name or (Settings.DisplayName and Settings.DisplayDisplayName and DisplayName == Name) and Name) or Content
 			Content = Settings.DisplayHealth and IsAPlayer and stringformat("[%s / %s] ", mathfloor(Health), MaxHealth)..Content or Content
@@ -645,8 +711,8 @@ local UpdatingFunctions = {
 	HeadDot = function(Entry, CircleObject, CircleOutlineObject)
 		local Settings = Environment.Properties.HeadDot
 
-		local Character = Entry.IsAPlayer and __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")
-		local Head = Character and FindFirstChild(Character, "Head")
+local Character = Entry.IsAPlayer and __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")
+local Head = Character and SafeFindFirstChild(Character, "Head")
 
 		if not Head then
 			setrenderproperty(CircleObject, "Visible", false)
@@ -961,8 +1027,8 @@ local CreatingFunctions = {
 			return
 		end
 
-		if not Entry.IsAPlayer and not Entry.PartHasCharacter then
-			if not FindFirstChild(__index(Entry.Object, "Parent"), "Head") then
+if not Entry.IsAPlayer and not Entry.PartHasCharacter then
+if not SafeFindFirstChild(__index(Entry.Object, "Parent"), "Head") then
 				return
 			end
 		end
@@ -1102,8 +1168,8 @@ local CreatingFunctions = {
 
 		local Cancel, UnconfirmedRigType = false, RigType == "N/A"
 
-		if UnconfirmedRigType and PlayerCharacter then
-			RigType = (FindFirstChild(PlayerCharacter, "UpperTorso") or WaitForChild(PlayerCharacter, "LowerTorso", Inf)) and "R15" or FindFirstChild(PlayerCharacter, "Torso") and "R6" or "N/A"
+if UnconfirmedRigType and PlayerCharacter then
+RigType = (SafeFindFirstChild(PlayerCharacter, "UpperTorso") or SafeWaitForChild(PlayerCharacter, "LowerTorso", Inf)) and "R15" or SafeFindFirstChild(PlayerCharacter, "Torso") and "R6" or "N/A"
 		end
 
 		if RigType == "N/A" then
@@ -1379,60 +1445,89 @@ local UtilityFunctions = {
 		local Hash = Entry.Hash
 
 		local IsAPlayer = Entry.IsAPlayer
-		local PartHasCharacter = Entry.PartHasCharacter
+                local PartHasCharacter = Entry.PartHasCharacter
 
-		local Settings = Environment.Settings
+                local Settings = Environment.Settings
 
-		local DeveloperSettings = Environment.DeveloperSettings
+                local DeveloperSettings = Environment.DeveloperSettings
 
-		local LocalCharacterPosition = CoreFunctions.GetLocalCharacterPosition()
+                local LocalCharacterPosition = CoreFunctions.GetLocalCharacterPosition()
 
-		Entry.Connections.UpdateChecks = Connect(__index(RunService, DeveloperSettings.UpdateMode), function()
-			local RenderDistance = Entry.RenderDistance
+                Entry.Connections.UpdateChecks = Connect(__index(RunService, DeveloperSettings.UpdateMode), function()
+                        local LocalCharacter = __index(LocalPlayer, "Character")
+                        local RenderDistance = Entry.RenderDistance
 
-			if not IsAPlayer and not PartHasCharacter then -- Part
-				Checks.Ready = (__index(Player, "Position") - LocalCharacterPosition).Magnitude <= RenderDistance; return
-			end
+                        if not IsAPlayer and not PartHasCharacter then -- Part
+                                Checks.Ready = (__index(Player, "Position") - LocalCharacterPosition).Magnitude <= RenderDistance; return
+                        end
 
-			if not IsAPlayer then -- NPC
-				local PartHumanoid = FindFirstChildOfClass(__index(Player, "Parent"), "Humanoid")
+                        if not IsAPlayer then -- NPC
+                                local CharacterModel = __index(Player, "Parent")
+                                local PartHumanoid = FindFirstChildOfClass(CharacterModel, "Humanoid")
+                                local AttachedPlayer = CharacterModel and GetPlayerFromCharacter(CharacterModel)
 
-				Checks.Ready = PartHasCharacter and PartHumanoid and IsDescendantOf(Player, Workspace)
+                                if AttachedPlayer == LocalPlayer then
+                                        Checks.Ready = false; return
+                                end
 
-				if not Checks.Ready then
-					return self.UnwrapObject(Hash)
-				end
+                                if Settings.DetectionMode == "Players" and not AttachedPlayer or Settings.DetectionMode == "NPCs" and AttachedPlayer then
+                                        Checks.Ready = false; return
+                                end
 
-				local IsInDistance = (__index(Player, "Position") - CoreFunctions.GetLocalCharacterPosition()).Magnitude <= RenderDistance
+                                Checks.Ready = PartHasCharacter and PartHumanoid and IsDescendantOf(Player, Workspace)
 
-				if Settings.AliveCheck then
-					Checks.Alive = __index(PartHumanoid, "Health") > 0
-				end
+                                if not Checks.Ready then
+                                        return self.UnwrapObject(Hash)
+                                end
 
-				Checks.Ready = Checks.Ready and Checks.Alive and IsInDistance and Environment.Settings.EntityESP
+                                local IsInDistance = (__index(Player, "Position") - CoreFunctions.GetLocalCharacterPosition()).Magnitude <= RenderDistance
 
-				return
-			end
+                                if Settings.AliveCheck then
+                                        Checks.Alive = __index(PartHumanoid, "Health") > 0
+                                end
 
-			local Character = __index(Player, "Character")
-			local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
-			local Head = Character and FindFirstChild(Character, "Head")
+                                Checks.Team = true
 
-			local IsInDistance
+                                if Settings.TeamCheck then
+                                        local TargetTeam = SafeGetTeamString(CharacterModel)
+                                        local LocalTeam = SafeGetTeamString(LocalCharacter)
 
-			if Character and IsDescendantOf(Character, Workspace) and Humanoid and Head then -- Player
-				local TeamCheckOption = DeveloperSettings.TeamCheckOption
+                                        Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
+                                end
 
-				Checks.Alive = true
-				Checks.Team = true
+                                Checks.Ready = Checks.Ready and Checks.Alive and Checks.Team and IsInDistance and Environment.Settings.EntityESP
 
-				if Settings.AliveCheck then
-					Checks.Alive = __index(Humanoid, "Health") > 0
-				end
+                                return
+                        end
 
-				if Settings.TeamCheck then
-					Checks.Team = __index(Player, TeamCheckOption) ~= __index(LocalPlayer, TeamCheckOption)
-				end
+local Character = __index(Player, "Character")
+local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
+local Head = Character and SafeFindFirstChild(Character, "Head")
+
+                        if Player == LocalPlayer then
+                                Checks.Ready = false; return
+                        end
+
+                        local IsInDistance
+
+                        if Character and IsDescendantOf(Character, Workspace) and Humanoid and Head then -- Player
+                                if Settings.DetectionMode == "NPCs" then
+                                        Checks.Ready = false; return
+                                end
+
+                                Checks.Alive = true
+                                Checks.Team = true
+
+                                if Settings.AliveCheck then
+                                        Checks.Alive = __index(Humanoid, "Health") > 0
+                                end
+
+                                if Settings.TeamCheck then
+                                        local TargetTeam = SafeGetTeamString(Character)
+                                        local LocalTeam = SafeGetTeamString(LocalCharacter)
+
+                                        Checks.Team = not (TargetTeam and LocalTeam and TargetTeam == LocalTeam)
+                                end
 
 				IsInDistance = (__index(Head, "Position") - LocalCharacterPosition).Magnitude <= RenderDistance
 			else
@@ -1446,11 +1541,11 @@ local UtilityFunctions = {
 
 			Checks.Ready = Checks.Alive and Checks.Team and not Settings.PartsOnly and IsInDistance
 
-			if Checks.Ready then
-				local Part = IsAPlayer and (FindFirstChild(Players, __index(Player, "Name")) and __index(Player, "Character"))
-				Part = IsAPlayer and (Part and (__index(Part, "PrimaryPart") or FindFirstChild(Part, "HumanoidRootPart"))) or Player
+if Checks.Ready then
+local Part = IsAPlayer and (SafeFindFirstChild(Players, __index(Player, "Name")) and __index(Player, "Character"))
+Part = IsAPlayer and (Part and (__index(Part, "PrimaryPart") or SafeFindFirstChild(Part, "HumanoidRootPart"))) or Player
 
-				Entry.RigType = Humanoid and FindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
+Entry.RigType = Humanoid and SafeFindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
 				Entry.RigType = Entry.RigType == "N/A" and Humanoid and (__index(Humanoid, "RigType") == 0 and "R6" or "R15") or "N/A" -- Deprecated method (might be faulty sometimes)
 				Entry.RigType = Entry.RigType == "N/A" and Humanoid and (__index(Humanoid, "RigType") == Enum.HumanoidRigType.R6 and "R6" or "R15") or "N/A" -- Secondary check
 			end
@@ -1589,66 +1684,27 @@ local UtilityFunctions = {
 }
 
 local LoadESP = function()
-	for _, Value in next, GetPlayers() do
-		if Value == LocalPlayer then
-			continue
-		end
+local Units = SafeFindFirstChild(Workspace, "Units")
 
-		UtilityFunctions:WrapObject(Value)
-	end
+        for _, Value in next, Units and Units:GetChildren() or {} do
+                if GetPlayerFromCharacter(Value) == LocalPlayer then
+                        continue
+                end
 
-	local ServiceConnections = Environment.UtilityAssets.ServiceConnections
+                UtilityFunctions:WrapObject(Value, __index(Value, "Name"))
+        end
 
-	ServiceConnections.PlayerRemoving = Connect(__index(Players, "PlayerRemoving"), UtilityFunctions.UnwrapObject)
+        local ServiceConnections = Environment.UtilityAssets.ServiceConnections
 
-	ServiceConnections.CharacterAdded = Connect(__index(Workspace, "DescendantAdded"), function(Object)
-		if not IsA(Object, "Model") then
-			return
-		end
+        if Units then
+                ServiceConnections.UnitAdded = Connect(__index(Units, "ChildAdded"), function(Object)
+                        if GetPlayerFromCharacter(Object) == LocalPlayer then
+                                return
+                        end
 
-		if not GetPlayerFromCharacter(Object) or not FindFirstChild(Players, __index(Object, "Name")) then
-			return
-		end
-
-		for _, Value in next, GetPlayers() do
-			local Player = nil
-
-			for _, _Value in next, Environment.UtilityAssets.WrappedObjects do
-				if not _Value.IsAPlayer then
-					continue
-				end
-
-				if __index(_Value.Object, "Name") == __index(Value, "Name") then
-					Player = _Value
-				end
-			end
-
-			if not Player then
-				UtilityFunctions:WrapObject(GetPlayerFromCharacter(Object))
-			end
-		end
-	end)
-
-	ServiceConnections.PlayerAdded = Connect(__index(Players, "PlayerAdded"), function(Player)
-		local WrappedObjects = Environment.UtilityAssets.WrappedObjects
-		local Hash = UtilityFunctions:WrapObject(Player)
-
-		for _, Entry in next, WrappedObjects do
-			if Entry.Hash ~= Hash then
-				continue
-			end
-
-			Entry.Connections[__index(Player, "Name").."CharacterAdded"] = Connect(__index(Player, "CharacterAdded"), function(Object)
-				for _, _Value in next, Environment.UtilityAssets.WrappedObjects do
-					if not _Value.Name == __index(Object, "Name") then
-						continue
-					end
-
-					UtilityFunctions:WrapObject(GetPlayerFromCharacter(Object))
-				end
-			end)
-		end
-	end)
+                        UtilityFunctions:WrapObject(Object, __index(Object, "Name"))
+                end)
+        end
 end
 
 setmetatable(Environment, {
