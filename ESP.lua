@@ -95,6 +95,21 @@ local function SafeIsA(Object, ...)
 return typeof(Object) == "Instance" and IsA(Object, ...)
 end
 
+local function ResolveUnitModel(Object)
+if not SafeIsA(Object, "Model") then
+return
+end
+
+local Humanoid = SafeFindFirstChildOfClass(Object, "Humanoid")
+local PrimaryPart = __index(Object, "PrimaryPart") or SafeFindFirstChild(Object, "HumanoidRootPart") or SafeFindFirstChild(Object, "Head")
+
+if not Humanoid or not PrimaryPart then
+return
+end
+
+return Object, Humanoid, PrimaryPart
+end
+
 local GetService = function(Service)
 	return cloneref(_GetService(game, Service))
 end
@@ -1691,7 +1706,13 @@ local Units = SafeFindFirstChild(Workspace, "Units")
                         continue
                 end
 
-                UtilityFunctions:WrapObject(Value, __index(Value, "Name"))
+                local UnitModel, _, PrimaryPart = ResolveUnitModel(Value)
+
+                if not UnitModel or not PrimaryPart then
+                        continue
+                end
+
+                UtilityFunctions:WrapObject(PrimaryPart, __index(UnitModel, "Name"))
         end
 
         local ServiceConnections = Environment.UtilityAssets.ServiceConnections
@@ -1702,7 +1723,13 @@ local Units = SafeFindFirstChild(Workspace, "Units")
                                 return
                         end
 
-                        UtilityFunctions:WrapObject(Object, __index(Object, "Name"))
+                        local UnitModel, _, PrimaryPart = ResolveUnitModel(Object)
+
+                        if not UnitModel or not PrimaryPart then
+                                return
+                        end
+
+                        UtilityFunctions:WrapObject(PrimaryPart, __index(UnitModel, "Name"))
                 end)
         end
 end
