@@ -79,6 +79,22 @@ local _GetService = __index(game, "GetService")
 local FindFirstChild, WaitForChild = __index(game, "FindFirstChild"), __index(game, "WaitForChild")
 local IsA = __index(game, "IsA")
 
+local function SafeFindFirstChild(Object, ...)
+return typeof(Object) == "Instance" and FindFirstChild(Object, ...)
+end
+
+local function SafeFindFirstChildOfClass(Object, ...)
+return typeof(Object) == "Instance" and Object.FindFirstChildOfClass(Object, ...)
+end
+
+local function SafeWaitForChild(Object, ...)
+return typeof(Object) == "Instance" and WaitForChild(Object, ...)
+end
+
+local function SafeIsA(Object, ...)
+return typeof(Object) == "Instance" and IsA(Object, ...)
+end
+
 local GetService = function(Service)
 	return cloneref(_GetService(game, Service))
 end
@@ -92,7 +108,7 @@ local CurrentCamera = __index(Workspace, "CurrentCamera")
 local LocalPlayer = __index(Players, "LocalPlayer")
 
 local FindFirstChildOfClass = function(self, ...)
-	return typeof(self) == "Instance" and self.FindFirstChildOfClass(self, ...)
+return SafeFindFirstChildOfClass(self, ...)
 end
 
 local Cache = {
@@ -427,13 +443,13 @@ local CoreFunctions = {
 
         GetLocalCharacterPosition = function()
                 local LocalCharacter = __index(LocalPlayer, "Character")
-                local LocalPlayerCheckPart = LocalCharacter and (__index(LocalCharacter, "PrimaryPart") or FindFirstChild(LocalCharacter, "Head"))
+local LocalPlayerCheckPart = LocalCharacter and (__index(LocalCharacter, "PrimaryPart") or SafeFindFirstChild(LocalCharacter, "Head"))
 
                 return LocalPlayerCheckPart and __index(LocalPlayerCheckPart, "Position") or __index(CurrentCamera, "CFrame").Position
         end,
 
         GetTeamString = function(Character)
-                local TeamValue = Character and FindFirstChild(Character, "TEAM")
+local TeamValue = Character and SafeFindFirstChild(Character, "TEAM")
 
                 return TeamValue and __index(TeamValue, "Value") or nil
         end,
@@ -454,10 +470,10 @@ local CoreFunctions = {
 		local DeveloperSettings = Environment.DeveloperSettings
 		local WidthBoundary = DeveloperSettings.WidthBoundary
 
-		local IsAPlayer = IsA(Object, "Player")
+local IsAPlayer = SafeIsA(Object, "Player")
 
-		local Part = IsAPlayer and (FindFirstChild(Players, __index(Object, "Name")) and __index(Object, "Character"))
-		Part = IsAPlayer and Part and (__index(Part, "PrimaryPart") or FindFirstChild(Part, "HumanoidRootPart")) or Object
+local Part = IsAPlayer and (SafeFindFirstChild(Players, __index(Object, "Name")) and __index(Object, "Character"))
+Part = IsAPlayer and Part and (__index(Part, "PrimaryPart") or SafeFindFirstChild(Part, "HumanoidRootPart")) or Object
 
 		if not Part or IsA(Part, "Player") then
 			return nil, nil, false
@@ -466,7 +482,7 @@ local CoreFunctions = {
 		local PartCFrame, PartPosition, PartUpVector = __index(Part, "CFrame"), __index(Part, "Position")
 		PartUpVector = PartCFrame.UpVector
 
-		local RigType = FindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
+local RigType = SafeFindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
 
 		local CameraUpVector = __index(CurrentCamera, "CFrame").UpVector
 
@@ -624,10 +640,10 @@ local UpdatingFunctions = {
 			local Name, DisplayName = Entry.Name, Entry.DisplayName
 
 			local Character = IsAPlayer and __index(Player, "Character") or Player
-			local Humanoid = FindFirstChildOfClass(Character, "Humanoid")
+local Humanoid = FindFirstChildOfClass(Character, "Humanoid")
 			local Health, MaxHealth = Humanoid and __index(Humanoid, "Health") or Nan, Humanoid and __index(Humanoid, "MaxHealth") or Nan
 
-			local Tool = Settings.DisplayTool and FindFirstChildOfClass(Character, "Tool")
+local Tool = Settings.DisplayTool and FindFirstChildOfClass(Character, "Tool")
 
 			Content = ((Settings.DisplayDisplayName and Settings.DisplayName and DisplayName ~= Name) and stringformat("%s (%s)", DisplayName, Name) or (Settings.DisplayDisplayName and not Settings.DisplayName) and DisplayName or (not Settings.DisplayDisplayName and Settings.DisplayName) and Name or (Settings.DisplayName and Settings.DisplayDisplayName and DisplayName == Name) and Name) or Content
 			Content = Settings.DisplayHealth and IsAPlayer and stringformat("[%s / %s] ", mathfloor(Health), MaxHealth)..Content or Content
@@ -695,8 +711,8 @@ local UpdatingFunctions = {
 	HeadDot = function(Entry, CircleObject, CircleOutlineObject)
 		local Settings = Environment.Properties.HeadDot
 
-		local Character = Entry.IsAPlayer and __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")
-		local Head = Character and FindFirstChild(Character, "Head")
+local Character = Entry.IsAPlayer and __index(Entry.Object, "Character") or __index(Entry.Object, "Parent")
+local Head = Character and SafeFindFirstChild(Character, "Head")
 
 		if not Head then
 			setrenderproperty(CircleObject, "Visible", false)
@@ -1011,8 +1027,8 @@ local CreatingFunctions = {
 			return
 		end
 
-		if not Entry.IsAPlayer and not Entry.PartHasCharacter then
-			if not FindFirstChild(__index(Entry.Object, "Parent"), "Head") then
+if not Entry.IsAPlayer and not Entry.PartHasCharacter then
+if not SafeFindFirstChild(__index(Entry.Object, "Parent"), "Head") then
 				return
 			end
 		end
@@ -1152,8 +1168,8 @@ local CreatingFunctions = {
 
 		local Cancel, UnconfirmedRigType = false, RigType == "N/A"
 
-		if UnconfirmedRigType and PlayerCharacter then
-			RigType = (FindFirstChild(PlayerCharacter, "UpperTorso") or WaitForChild(PlayerCharacter, "LowerTorso", Inf)) and "R15" or FindFirstChild(PlayerCharacter, "Torso") and "R6" or "N/A"
+if UnconfirmedRigType and PlayerCharacter then
+RigType = (SafeFindFirstChild(PlayerCharacter, "UpperTorso") or SafeWaitForChild(PlayerCharacter, "LowerTorso", Inf)) and "R15" or SafeFindFirstChild(PlayerCharacter, "Torso") and "R6" or "N/A"
 		end
 
 		if RigType == "N/A" then
@@ -1484,9 +1500,9 @@ local UtilityFunctions = {
                                 return
                         end
 
-                        local Character = __index(Player, "Character")
-                        local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
-                        local Head = Character and FindFirstChild(Character, "Head")
+local Character = __index(Player, "Character")
+local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
+local Head = Character and SafeFindFirstChild(Character, "Head")
 
                         if Player == LocalPlayer then
                                 Checks.Ready = false; return
@@ -1525,11 +1541,11 @@ local UtilityFunctions = {
 
 			Checks.Ready = Checks.Alive and Checks.Team and not Settings.PartsOnly and IsInDistance
 
-			if Checks.Ready then
-				local Part = IsAPlayer and (FindFirstChild(Players, __index(Player, "Name")) and __index(Player, "Character"))
-				Part = IsAPlayer and (Part and (__index(Part, "PrimaryPart") or FindFirstChild(Part, "HumanoidRootPart"))) or Player
+if Checks.Ready then
+local Part = IsAPlayer and (SafeFindFirstChild(Players, __index(Player, "Name")) and __index(Player, "Character"))
+Part = IsAPlayer and (Part and (__index(Part, "PrimaryPart") or SafeFindFirstChild(Part, "HumanoidRootPart"))) or Player
 
-				Entry.RigType = Humanoid and FindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
+Entry.RigType = Humanoid and SafeFindFirstChild(__index(Part, "Parent"), "Torso") and "R6" or "R15"
 				Entry.RigType = Entry.RigType == "N/A" and Humanoid and (__index(Humanoid, "RigType") == 0 and "R6" or "R15") or "N/A" -- Deprecated method (might be faulty sometimes)
 				Entry.RigType = Entry.RigType == "N/A" and Humanoid and (__index(Humanoid, "RigType") == Enum.HumanoidRigType.R6 and "R6" or "R15") or "N/A" -- Secondary check
 			end
@@ -1668,7 +1684,7 @@ local UtilityFunctions = {
 }
 
 local LoadESP = function()
-        local Units = FindFirstChild(Workspace, "Units")
+local Units = SafeFindFirstChild(Workspace, "Units")
 
         for _, Value in next, Units and Units:GetChildren() or {} do
                 if GetPlayerFromCharacter(Value) == LocalPlayer then

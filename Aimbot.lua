@@ -44,6 +44,14 @@ local LocalPlayer = __index(Players, "LocalPlayer")
 local Camera = __index(workspace, "CurrentCamera")
 
 local FindFirstChild, FindFirstChildOfClass = __index(game, "FindFirstChild"), __index(game, "FindFirstChildOfClass")
+
+local function SafeFindFirstChild(Object, ...)
+return typeof(Object) == "Instance" and FindFirstChild(Object, ...)
+end
+
+local function SafeFindFirstChildOfClass(Object, ...)
+return typeof(Object) == "Instance" and FindFirstChildOfClass(Object, ...)
+end
 local GetDescendants = __index(game, "GetDescendants")
 local WorldToViewportPoint = __index(Camera, "WorldToViewportPoint")
 local GetPartsObscuringTarget = __index(Camera, "GetPartsObscuringTarget")
@@ -191,13 +199,13 @@ local GetClosestPlayer = function()
         local Settings = Environment.Settings
         local LockPart = Settings.LockPart
 
-        local Units = FindFirstChild(workspace, "Units")
+local Units = SafeFindFirstChild(workspace, "Units")
         local LocalCharacter = __index(LocalPlayer, "Character")
 
         if not Environment.Locked then
                 RequiredDistance = Environment.FOVSettings.Enabled and Environment.FOVSettings.Radius or 2000
 
-                local LocalTeamInstance = LocalCharacter and FindFirstChild(LocalCharacter, "TEAM")
+local LocalTeamInstance = LocalCharacter and SafeFindFirstChild(LocalCharacter, "TEAM")
                 local LocalTeam = LocalTeamInstance and __index(LocalTeamInstance, "Value")
 
                 for _, Character in next, Units and GetChildren(Units) or {} do
@@ -205,8 +213,8 @@ local GetClosestPlayer = function()
                                 continue
                         end
 
-                        local Humanoid = FindFirstChildOfClass(Character, "Humanoid")
-                        local LockPartInstance = FindFirstChild(Character, LockPart) or __index(Character, "PrimaryPart")
+local Humanoid = SafeFindFirstChildOfClass(Character, "Humanoid")
+local LockPartInstance = SafeFindFirstChild(Character, LockPart) or __index(Character, "PrimaryPart")
                         local Player = Character and GetPlayerFromCharacter(Players, Character)
                         local IsPlayer = Player ~= nil
 
@@ -220,7 +228,7 @@ local GetClosestPlayer = function()
                                 continue
                         end
 
-                        local TeamValue = FindFirstChild(Character, "TEAM")
+local TeamValue = SafeFindFirstChild(Character, "TEAM")
                         TeamValue = TeamValue and __index(TeamValue, "Value")
 
                         if Settings.TeamCheck and TeamValue and LocalTeam and TeamValue == LocalTeam then
@@ -312,7 +320,7 @@ local Load = function()
                         if Environment.Locked then
                                 local LockedEntry = Environment.Locked
                                 local LockedCharacter = LockedEntry and LockedEntry.Character
-                                local LockedHumanoid = LockedCharacter and FindFirstChildOfClass(LockedCharacter, "Humanoid")
+local LockedHumanoid = LockedCharacter and SafeFindFirstChildOfClass(LockedCharacter, "Humanoid")
                                 Offset = OffsetToMoveDirection and LockedHumanoid and __index(LockedHumanoid, "MoveDirection") * (mathclamp(Settings.OffsetIncrement, 1, 30) / 10) or Vector3zero
 
                                 local LockedPart = LockedCharacter and (LockedCharacter[LockPart] or __index(LockedCharacter, "PrimaryPart"))
