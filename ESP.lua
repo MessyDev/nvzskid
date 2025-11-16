@@ -18,7 +18,7 @@
 local game = game
 local assert, loadstring, select, next, type, typeof, pcall, xpcall, setmetatable, getmetatable, tick, warn = assert, loadstring, select, next, type, typeof, pcall, xpcall, setmetatable, getmetatable, tick, warn
 local mathfloor, mathabs, mathcos, mathsin, mathrad, mathdeg, mathmin, mathmax, mathclamp, mathrandom = math.floor, math.abs, math.cos, math.sin, math.rad, math.deg, math.min, math.max, math.clamp, math.random
-local stringformat, stringfind, stringchar = string.format, string.find, string.char
+local stringformat, stringfind, stringchar, stringlower = string.format, string.find, string.char, string.lower
 local unpack = table.unpack
 local wait, spawn = task.wait, task.spawn
 local getgenv, getrawmetatable, getupvalue, gethiddenproperty, cloneref, clonefunction = getgenv, getrawmetatable, debug.getupvalue, gethiddenproperty, cloneref or function(...)
@@ -432,13 +432,58 @@ local function SafeGetTeamString(Character)
         local Functions = CoreFunctions or (getgenv().ExunysDeveloperESP and getgenv().ExunysDeveloperESP.CoreFunctions)
         local GetTeamString = Functions and Functions.GetTeamString
 
-        if not GetTeamString then
+        local function ResolveTeamFromInstance(Instance)
+                if not Instance then
+                        return nil
+                end
+
+                local AttributeValue = Instance.GetAttribute and Instance:GetAttribute("TEAM")
+
+                if AttributeValue then
+                        return AttributeValue
+                end
+
+                local DirectValue = SafeFindFirstChild(Instance, "TEAM")
+
+                if DirectValue and __index(DirectValue, "Value") then
+                        return __index(DirectValue, "Value")
+                end
+
+                local Descendants = Instance.GetDescendants and Instance:GetDescendants()
+
+                for _, Descendant in next, Descendants or {} do
+                        if __index(Descendant, "Name") == "TEAM" and __index(Descendant, "Value") then
+                                return __index(Descendant, "Value")
+                        end
+                end
+
                 return nil
         end
 
-        local Success, Result = pcall(GetTeamString, Character)
+        if GetTeamString then
+                local Success, Result = pcall(GetTeamString, Character)
 
-return Success and Result or nil
+                if Success and Result then
+                        return Result
+                end
+        end
+
+        local CandidateInstances = {
+                Character,
+                SafeFindFirstChildOfClass(Character, "Humanoid"),
+                __index(Character, "PrimaryPart") or SafeFindFirstChild(Character, "HumanoidRootPart") or SafeFindFirstChild(Character, "Head"),
+                __index(Character, "Parent")
+        }
+
+        for _, Instance in next, CandidateInstances do
+                local ResolvedTeam = ResolveTeamFromInstance(Instance)
+
+                if ResolvedTeam then
+                        return ResolvedTeam
+                end
+        end
+
+        return nil
 end
 
 local CoreFunctions = {
@@ -1699,37 +1744,48 @@ Entry.RigType = Humanoid and SafeFindFirstChild(__index(Part, "Parent"), "Torso"
 }
 
 local LoadESP = function()
-local Units = SafeFindFirstChild(Workspace, "Units")
+        local ServiceConnections = Environment.UtilityAssets.ServiceConnections
+        local Units = SafeFindFirstChild(Workspace, "Units")
 
-        for _, Value in next, Units and Units:GetChildren() or {} do
-                if GetPlayerFromCharacter(Value) == LocalPlayer then
-                        continue
+        local function WrapUnit(Object)
+                if GetPlayerFromCharacter(Object) == LocalPlayer then
+                        return
                 end
 
-                local UnitModel, _, PrimaryPart = ResolveUnitModel(Value)
+                local UnitModel, _, PrimaryPart = ResolveUnitModel(Object)
 
                 if not UnitModel or not PrimaryPart then
-                        continue
+                        return
                 end
 
                 UtilityFunctions:WrapObject(PrimaryPart, __index(UnitModel, "Name"))
         end
 
-        local ServiceConnections = Environment.UtilityAssets.ServiceConnections
+        local function BindUnitsContainer(Container)
+                if not Container then
+                        return
+                end
 
-        if Units then
-                ServiceConnections.UnitAdded = Connect(__index(Units, "ChildAdded"), function(Object)
-                        if GetPlayerFromCharacter(Object) == LocalPlayer then
-                                return
+                Units = Container
+
+                for _, Value in next, Units:GetChildren() do
+                        WrapUnit(Value)
+                end
+
+                if ServiceConnections.UnitAdded then
+                        pcall(Disconnect, ServiceConnections.UnitAdded)
+                end
+
+                ServiceConnections.UnitAdded = Connect(__index(Units, "ChildAdded"), WrapUnit)
+        end
+
+        BindUnitsContainer(Units)
+
+        if not Units then
+                ServiceConnections.UnitContainerAdded = Connect(__index(Workspace, "ChildAdded"), function(Object)
+                        if __index(Object, "Name") == "Units" then
+                                BindUnitsContainer(Object)
                         end
-
-                        local UnitModel, _, PrimaryPart = ResolveUnitModel(Object)
-
-                        if not UnitModel or not PrimaryPart then
-                                return
-                        end
-
-                        UtilityFunctions:WrapObject(PrimaryPart, __index(UnitModel, "Name"))
                 end)
         end
 end
