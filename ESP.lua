@@ -1663,14 +1663,14 @@ local LoadESP = function()
         local Units = FindFirstChild(Workspace, "Units")
 
         for _, Value in next, Units and Units:GetChildren() or {} do
-                UtilityFunctions:WrapObject(Value)
+                UtilityFunctions:WrapObject(Value, __index(Value, "Name"))
         end
 
         local ServiceConnections = Environment.UtilityAssets.ServiceConnections
 
         if Units then
                 ServiceConnections.UnitAdded = Connect(__index(Units, "ChildAdded"), function(Object)
-                        UtilityFunctions:WrapObject(Object)
+                        UtilityFunctions:WrapObject(Object, __index(Object, "Name"))
                 end)
         end
 end

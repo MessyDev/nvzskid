@@ -188,6 +188,7 @@ local GetClosestPlayer = function()
         local LockPart = Settings.LockPart
 
         local Units = FindFirstChild(workspace, "Units")
+        local LocalCharacter = __index(LocalPlayer, "Character")
 
         if not Environment.Locked then
                 RequiredDistance = Environment.FOVSettings.Enabled and Environment.FOVSettings.Radius or 2000
@@ -197,7 +198,7 @@ local GetClosestPlayer = function()
 
                 for _, Character in next, Units and GetChildren(Units) or {} do
                         local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
-                        local LockPartInstance = Character and FindFirstChild(Character, LockPart)
+                        local LockPartInstance = Character and (FindFirstChild(Character, LockPart) or __index(Character, "PrimaryPart"))
                         local Player = Character and GetPlayerFromCharacter(Players, Character)
                         local IsPlayer = Player ~= nil
 
@@ -207,7 +208,7 @@ local GetClosestPlayer = function()
 
                         local Identifier = (IsPlayer and __index(Player, "Name")) or __index(Character, "Name")
 
-                        if IsPlayer and Player == LocalPlayer or tablefind(Environment.Blacklisted, Identifier) or not LockPartInstance or not Humanoid then
+                        if Character == LocalCharacter or IsPlayer and Player == LocalPlayer or tablefind(Environment.Blacklisted, Identifier) or not LockPartInstance or not Humanoid then
                                 continue
                         end
 
@@ -240,10 +241,22 @@ local GetClosestPlayer = function()
 
                         if Distance < RequiredDistance and OnScreen then
                                 RequiredDistance, Environment.Locked = Distance, {Character = Character, Player = Player}
+                        else
+                                Offset = Vector3zero
                         end
                 end
-        elseif (GetMouseLocation(UserInputService) - ConvertVector(WorldToViewportPoint(Camera, __index(__index(__index(Environment.Locked, "Character"), LockPart), "Position")))).Magnitude > RequiredDistance then
-                CancelLock()
+        elseif Environment.Locked then
+                local LockedCharacter = __index(Environment.Locked, "Character")
+                local LockedPart = LockedCharacter and (LockedCharacter[LockPart] or __index(LockedCharacter, "PrimaryPart"))
+
+                if not LockedPart then
+                        CancelLock()
+                        return
+                end
+
+                if (GetMouseLocation(UserInputService) - ConvertVector(WorldToViewportPoint(Camera, __index(LockedPart, "Position")))).Magnitude > RequiredDistance then
+                        CancelLock()
+                end
         end
 end
 
@@ -284,14 +297,22 @@ local Load = function()
 			setrenderproperty(FOVCircleOutline, "Visible", false)
 		end
 
-		if Running and Settings.Enabled then
-			GetClosestPlayer()
+                if Running and Settings.Enabled then
+                        GetClosestPlayer()
 
-			Offset = OffsetToMoveDirection and __index(FindFirstChildOfClass(__index(Environment.Locked, "Character"), "Humanoid"), "MoveDirection") * (mathclamp(Settings.OffsetIncrement, 1, 30) / 10) or Vector3zero
+                        if Environment.Locked then
+                                local LockedHumanoid = FindFirstChildOfClass(__index(Environment.Locked, "Character"), "Humanoid")
+                                Offset = OffsetToMoveDirection and LockedHumanoid and __index(LockedHumanoid, "MoveDirection") * (mathclamp(Settings.OffsetIncrement, 1, 30) / 10) or Vector3zero
 
-			if Environment.Locked then
-				local LockedPosition_Vector3 = __index(__index(Environment.Locked, "Character")[LockPart], "Position")
-				local LockedPosition = WorldToViewportPoint(Camera, LockedPosition_Vector3 + Offset)
+                                local LockedPart = __index(Environment.Locked, "Character")[LockPart] or __index(__index(Environment.Locked, "Character"), "PrimaryPart")
+
+                                if not LockedPart then
+                                        CancelLock()
+                                        return
+                                end
+
+                                local LockedPosition_Vector3 = __index(LockedPart, "Position")
+                                local LockedPosition = WorldToViewportPoint(Camera, LockedPosition_Vector3 + Offset)
 
 				if Environment.Settings.LockMode == 2 then
 					mousemoverel((LockedPosition.X - GetMouseLocation(UserInputService).X) / Settings.Sensitivity2, (LockedPosition.Y - GetMouseLocation(UserInputService).Y) / Settings.Sensitivity2)
