@@ -1450,6 +1450,10 @@ local UtilityFunctions = {
                                 local PartHumanoid = FindFirstChildOfClass(CharacterModel, "Humanoid")
                                 local AttachedPlayer = CharacterModel and GetPlayerFromCharacter(CharacterModel)
 
+                                if AttachedPlayer == LocalPlayer then
+                                        Checks.Ready = false; return
+                                end
+
                                 if Settings.DetectionMode == "Players" and not AttachedPlayer or Settings.DetectionMode == "NPCs" and AttachedPlayer then
                                         Checks.Ready = false; return
                                 end
@@ -1481,8 +1485,12 @@ local UtilityFunctions = {
                         end
 
                         local Character = __index(Player, "Character")
-			local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
+                        local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
                         local Head = Character and FindFirstChild(Character, "Head")
+
+                        if Player == LocalPlayer then
+                                Checks.Ready = false; return
+                        end
 
                         local IsInDistance
 
@@ -1663,6 +1671,10 @@ local LoadESP = function()
         local Units = FindFirstChild(Workspace, "Units")
 
         for _, Value in next, Units and Units:GetChildren() or {} do
+                if GetPlayerFromCharacter(Value) == LocalPlayer then
+                        continue
+                end
+
                 UtilityFunctions:WrapObject(Value, __index(Value, "Name"))
         end
 
@@ -1670,6 +1682,10 @@ local LoadESP = function()
 
         if Units then
                 ServiceConnections.UnitAdded = Connect(__index(Units, "ChildAdded"), function(Object)
+                        if GetPlayerFromCharacter(Object) == LocalPlayer then
+                                return
+                        end
+
                         UtilityFunctions:WrapObject(Object, __index(Object, "Name"))
                 end)
         end

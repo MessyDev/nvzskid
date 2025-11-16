@@ -246,7 +246,8 @@ local GetClosestPlayer = function()
                         end
                 end
         elseif Environment.Locked then
-                local LockedCharacter = __index(Environment.Locked, "Character")
+                local LockedEntry = Environment.Locked
+                local LockedCharacter = LockedEntry and LockedEntry.Character
                 local LockedPart = LockedCharacter and (LockedCharacter[LockPart] or __index(LockedCharacter, "PrimaryPart"))
 
                 if not LockedPart then
@@ -301,10 +302,12 @@ local Load = function()
                         GetClosestPlayer()
 
                         if Environment.Locked then
-                                local LockedHumanoid = FindFirstChildOfClass(__index(Environment.Locked, "Character"), "Humanoid")
+                                local LockedEntry = Environment.Locked
+                                local LockedCharacter = LockedEntry and LockedEntry.Character
+                                local LockedHumanoid = LockedCharacter and FindFirstChildOfClass(LockedCharacter, "Humanoid")
                                 Offset = OffsetToMoveDirection and LockedHumanoid and __index(LockedHumanoid, "MoveDirection") * (mathclamp(Settings.OffsetIncrement, 1, 30) / 10) or Vector3zero
 
-                                local LockedPart = __index(Environment.Locked, "Character")[LockPart] or __index(__index(Environment.Locked, "Character"), "PrimaryPart")
+                                local LockedPart = LockedCharacter and (LockedCharacter[LockPart] or __index(LockedCharacter, "PrimaryPart"))
 
                                 if not LockedPart then
                                         CancelLock()
