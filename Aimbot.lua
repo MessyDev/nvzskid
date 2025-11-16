@@ -193,8 +193,8 @@ local GetClosestPlayer = function()
         if not Environment.Locked then
                 RequiredDistance = Environment.FOVSettings.Enabled and Environment.FOVSettings.Radius or 2000
 
-                local LocalTeam = (FindFirstChild(__index(LocalPlayer, "Character"), "TEAM"))
-                LocalTeam = LocalTeam and __index(LocalTeam, "Value")
+                local LocalTeamInstance = LocalCharacter and FindFirstChild(LocalCharacter, "TEAM")
+                local LocalTeam = LocalTeamInstance and __index(LocalTeamInstance, "Value")
 
                 for _, Character in next, Units and GetChildren(Units) or {} do
                         local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
@@ -223,8 +223,8 @@ local GetClosestPlayer = function()
                                 continue
                         end
 
-                        if Settings.WallCheck then
-                                local BlacklistTable = GetDescendants(__index(LocalPlayer, "Character"))
+                        if Settings.WallCheck and LocalCharacter then
+                                local BlacklistTable = GetDescendants(LocalCharacter)
 
                                 for _, Value in next, GetDescendants(Character) do
                                         BlacklistTable[#BlacklistTable + 1] = Value
