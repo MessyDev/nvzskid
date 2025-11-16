@@ -183,6 +183,10 @@ local CancelLock = function()
 	end
 end
 
+local function IsModel(Object)
+        return Object and Object.IsA and Object:IsA("Model")
+end
+
 local GetClosestPlayer = function()
         local Settings = Environment.Settings
         local LockPart = Settings.LockPart
@@ -197,8 +201,12 @@ local GetClosestPlayer = function()
                 local LocalTeam = LocalTeamInstance and __index(LocalTeamInstance, "Value")
 
                 for _, Character in next, Units and GetChildren(Units) or {} do
-                        local Humanoid = Character and FindFirstChildOfClass(Character, "Humanoid")
-                        local LockPartInstance = Character and (FindFirstChild(Character, LockPart) or __index(Character, "PrimaryPart"))
+                        if not IsModel(Character) then
+                                continue
+                        end
+
+                        local Humanoid = FindFirstChildOfClass(Character, "Humanoid")
+                        local LockPartInstance = FindFirstChild(Character, LockPart) or __index(Character, "PrimaryPart")
                         local Player = Character and GetPlayerFromCharacter(Players, Character)
                         local IsPlayer = Player ~= nil
 
